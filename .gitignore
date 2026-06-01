@@ -1,0 +1,32 @@
+# --- Local-only config (never commit secrets) ---
+/src/main/resources/application.yml
+/src/main/resources/application-local.yml
+/src/main/resources/application-local.properties
+
+# --- Gradle ---
+.gradle/
+build/
+
+# --- IDE ---
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.code-workspace
+
+# --- Cursor (local plans / editor state) ---
+.cursor/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Env files (docker / secrets in later phases) ---
+.env
+.env.*
+!.env.example
