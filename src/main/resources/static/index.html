@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <main class="container">
+        <h1>URL Shortener</h1>
+        <p class="subtitle">Paste a long URL and get a short, shareable link</p>
+
+        <form id="shorten-form">
+            <div class="input-group">
+                <input
+                    type="url"
+                    id="url-input"
+                    placeholder="https://example.com/very/long/url..."
+                    required
+                    autocomplete="off"
+                >
+                <button type="submit" id="submit-btn">Shorten</button>
+            </div>
+        </form>
+
+        <div id="result" class="result hidden">
+            <p class="result-label">Your short URL:</p>
+            <div class="result-link-group">
+                <a id="short-url" href="#" target="_blank" rel="noopener"></a>
+                <button id="copy-btn" type="button">Copy</button>
+            </div>
+        </div>
+
+        <div id="error" class="error hidden"></div>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+</html>
