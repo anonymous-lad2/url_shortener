@@ -1,7 +1,10 @@
 package com.happysat.url_shortener.controller;
 
-import com.happysat.url_shortener.model.ShortUrl;
+import com.happysat.url_shortener.dto.ShortenRequest;
+import com.happysat.url_shortener.dto.ShortenResponse;
+import com.happysat.url_shortener.mapper.UrlMapper;
 import com.happysat.url_shortener.service.UrlService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,36 +12,29 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
 public class UrlController {
 
     private final UrlService urlService;
+    private final UrlMapper urlMapper;
 
     @PostMapping("/api/shorten")
-    public ResponseEntity<?> shorten(@RequestBody Map<String, String> body) {
-        String url = body.get("url");
-        if (url == null || url.isBlank()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Field 'url' is required and must not be blank"));
-        }
-
-        String shortCode = urlService.shorten(url);
+    public ResponseEntity<ShortenResponse> shorten(@Valid @RequestBody ShortenRequest request) {
+        String shortCode = urlService.shorten(request.url());
         String shortUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/{code}")
                 .buildAndExpand(shortCode)
                 .toUriString();
-
-        return ResponseEntity.ok(Map.of("shortUrl", shortUrl));
+        return ResponseEntity.ok(urlMapper.toResponse(shortUrl, request.url()));
     }
 
     @GetMapping("/{code:[0-9a-zA-Z]+}")
     public ResponseEntity<Void> redirect(@PathVariable String code) {
-        ShortUrl shortUrl = urlService.resolve(code);
+        String originalUrl = urlService.resolve(code);
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(shortUrl.getOriginalUrl()))
+                .location(URI.create(originalUrl))
                 .build();
     }
 }
