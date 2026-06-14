@@ -22,14 +22,13 @@ public class ShortUrl {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "original_url", length = 2048)
+    @Column(name = "original_url", length = 2048, nullable = false)
     private String originalUrl;
 
-    @Column(name = "short_code", unique = true)
+    @Column(name = "short_code", length = 11, unique = true)
     private String shortCode;
 
     @CurrentTimestamp(event = EventType.INSERT)
-    @Column(updatable = false)
+    @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
-
 }
