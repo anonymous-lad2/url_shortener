@@ -13,3 +13,7 @@ spring:
   h2:
     console:
       enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
