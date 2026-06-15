@@ -29,6 +29,7 @@ dependencies {
   implementation 'org.flywaydb:flyway-database-postgresql'
 
   // Phase 3: Redis caching
+  implementation 'org.springframework.boot:spring-boot-starter-cache'
   implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
   // Phase 3: Security + JWT auth

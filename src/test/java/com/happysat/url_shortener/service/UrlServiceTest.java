@@ -1,5 +1,8 @@
 package com.happysat.url_shortener.service;
 
+import com.happysat.url_shortener.dto.ShortenRequest;
+import com.happysat.url_shortener.exception.AliasAlreadyExistsException;
+import com.happysat.url_shortener.exception.UrlExpiredException;
 import com.happysat.url_shortener.exception.UrlNotFoundException;
 import com.happysat.url_shortener.model.ShortUrl;
 import com.happysat.url_shortener.repository.UrlRepository;
@@ -11,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,12 +28,15 @@ class UrlServiceTest {
     @Mock
     private UrlRepository urlRepository;
 
+    @Mock
+    private UrlLookupService urlLookupService;
+
     @InjectMocks
     private UrlService urlService;
 
     @Test
-    @DisplayName("shorten() saves entity twice and returns Base62-encoded code")
-    void shorten_savesAndReturnsCode() {
+    @DisplayName("shorten() without alias saves twice and returns Base62-encoded code")
+    void shorten_withoutAlias_savesAndReturnsCode() {
         when(urlRepository.save(any(ShortUrl.class))).thenAnswer(invocation -> {
             ShortUrl entity = invocation.getArgument(0);
             if (entity.getId() == null) {
@@ -38,46 +45,105 @@ class UrlServiceTest {
             return entity;
         });
 
-        String code = urlService.shorten("https://google.com");
+        String code = urlService.shorten(new ShortenRequest("https://google.com", null, null));
 
         assertEquals(Base62Encoder.encode(1L), code);
         verify(urlRepository, times(2)).save(any(ShortUrl.class));
     }
 
     @Test
-    @DisplayName("shorten() sets the shortCode on the entity before second save")
-    void shorten_setsShortCodeOnEntity() {
+    @DisplayName("shorten() with custom alias saves once and returns alias")
+    void shorten_withCustomAlias_savesOnceAndReturnsAlias() {
+        when(urlRepository.findByShortCode("my-link")).thenReturn(Optional.empty());
+        when(urlRepository.save(any(ShortUrl.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        String code = urlService.shorten(new ShortenRequest("https://google.com", "my-link", null));
+
+        assertEquals("my-link", code);
+        verify(urlRepository, times(1)).save(any(ShortUrl.class));
+    }
+
+    @Test
+    @DisplayName("shorten() with taken alias throws AliasAlreadyExistsException")
+    void shorten_withTakenAlias_throwsConflict() {
+        ShortUrl existing = new ShortUrl();
+        existing.setShortCode("taken");
+        when(urlRepository.findByShortCode("taken")).thenReturn(Optional.of(existing));
+
+        assertThrows(
+                AliasAlreadyExistsException.class,
+                () -> urlService.shorten(new ShortenRequest("https://google.com", "taken", null))
+        );
+        verify(urlRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("shorten() stores expiresAt on entity")
+    void shorten_withExpiresAt_setsExpiryOnEntity() {
+        LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
         when(urlRepository.save(any(ShortUrl.class))).thenAnswer(invocation -> {
             ShortUrl entity = invocation.getArgument(0);
             if (entity.getId() == null) {
-                entity.setId(42L);
+                entity.setId(5L);
             }
             return entity;
         });
 
-        String code = urlService.shorten("https://example.com");
+        urlService.shorten(new ShortenRequest("https://google.com", null, expiresAt));
 
-        assertEquals(Base62Encoder.encode(42L), code);
+        verify(urlRepository, times(2)).save(argThat(entity ->
+                expiresAt.equals(entity.getExpiresAt())
+        ));
     }
 
     @Test
-    @DisplayName("resolve() returns original URL for existing code")
-    void resolve_existingCode_returnsOriginalUrl() {
+    @DisplayName("resolve() returns original URL for existing code without expiry")
+    void resolve_existingCodeWithoutExpiry_returnsOriginalUrl() {
         ShortUrl entity = new ShortUrl();
         entity.setOriginalUrl("https://google.com");
         entity.setShortCode("abc");
-        when(urlRepository.findByShortCode("abc")).thenReturn(Optional.of(entity));
+        when(urlLookupService.lookup("abc")).thenReturn(entity);
 
         String result = urlService.resolve("abc");
 
         assertEquals("https://google.com", result);
-        verify(urlRepository).findByShortCode("abc");
+        verify(urlLookupService).lookup("abc");
+    }
+
+    @Test
+    @DisplayName("resolve() returns original URL when expiry is in the future")
+    void resolve_futureExpiry_returnsOriginalUrl() {
+        ShortUrl entity = new ShortUrl();
+        entity.setOriginalUrl("https://google.com");
+        entity.setShortCode("future");
+        entity.setExpiresAt(LocalDateTime.now().plusDays(1));
+        when(urlLookupService.lookup("future")).thenReturn(entity);
+
+        String result = urlService.resolve("future");
+
+        assertEquals("https://google.com", result);
+    }
+
+    @Test
+    @DisplayName("resolve() throws UrlExpiredException when expiry is in the past")
+    void resolve_pastExpiry_throwsGone() {
+        ShortUrl entity = new ShortUrl();
+        entity.setOriginalUrl("https://google.com");
+        entity.setShortCode("expired");
+        entity.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+        when(urlLookupService.lookup("expired")).thenReturn(entity);
+
+        UrlExpiredException ex = assertThrows(
+                UrlExpiredException.class,
+                () -> urlService.resolve("expired")
+        );
+        assertTrue(ex.getMessage().contains("expired"));
     }
 
     @Test
     @DisplayName("resolve() throws UrlNotFoundException for unknown code")
     void resolve_unknownCode_throwsNotFound() {
-        when(urlRepository.findByShortCode("xyz")).thenReturn(Optional.empty());
+        when(urlLookupService.lookup("xyz")).thenThrow(new UrlNotFoundException("xyz"));
 
         UrlNotFoundException ex = assertThrows(
                 UrlNotFoundException.class,

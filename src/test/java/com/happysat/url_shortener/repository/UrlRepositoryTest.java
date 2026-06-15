@@ -8,6 +8,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -63,6 +64,20 @@ class UrlRepositoryTest {
         ShortUrl saved = urlRepository.saveAndFlush(entity);
 
         assertNotNull(saved.getCreatedAt());
+    }
+
+    @Test
+    @DisplayName("expiresAt is persisted when set")
+    void save_persistsExpiresAt() {
+        LocalDateTime expiresAt = LocalDateTime.now().plusDays(30);
+        ShortUrl entity = new ShortUrl();
+        entity.setOriginalUrl("https://google.com");
+        entity.setShortCode("exp1");
+        entity.setExpiresAt(expiresAt);
+        ShortUrl saved = urlRepository.saveAndFlush(entity);
+
+        assertEquals(expiresAt, saved.getExpiresAt());
+        assertEquals(expiresAt, urlRepository.findByShortCode("exp1").orElseThrow().getExpiresAt());
     }
 
     @Test

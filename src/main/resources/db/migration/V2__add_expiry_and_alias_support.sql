@@ -1,0 +1,1 @@
+ALTER TABLE shorturl ADD COLUMN expires_at TIMESTAMP;

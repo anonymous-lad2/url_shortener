@@ -31,4 +31,7 @@ public class ShortUrl {
     @CurrentTimestamp(event = EventType.INSERT)
     @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
 }

@@ -22,7 +22,7 @@ public class UrlController {
 
     @PostMapping("/api/shorten")
     public ResponseEntity<ShortenResponse> shorten(@Valid @RequestBody ShortenRequest request) {
-        String shortCode = urlService.shorten(request.url());
+        String shortCode = urlService.shorten(request);
         String shortUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/{code}")
                 .buildAndExpand(shortCode)
@@ -30,7 +30,7 @@ public class UrlController {
         return ResponseEntity.ok(urlMapper.toResponse(shortUrl, request.url()));
     }
 
-    @GetMapping("/{code:[0-9a-zA-Z]+}")
+    @GetMapping("/{code:[0-9a-zA-Z_-]+}")
     public ResponseEntity<Void> redirect(@PathVariable String code) {
         String originalUrl = urlService.resolve(code);
         return ResponseEntity.status(HttpStatus.FOUND)

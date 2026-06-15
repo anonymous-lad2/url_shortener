@@ -3,6 +3,7 @@ package com.happysat.url_shortener.exception;
 import com.happysat.url_shortener.dto.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -28,6 +29,23 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidUrl(InvalidUrlException ex) {
         log.warn("Invalid URL: {}", ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(DataIntegrityViolationException ex) {
+        return buildResponse(HttpStatus.CONFLICT, "Alias already exists");
+    }
+
+    @ExceptionHandler(AliasAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleAliasAlreadyExists(AliasAlreadyExistsException ex) {
+        log.warn("Alias already exists: {}", ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(UrlExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleUrlExpired(UrlExpiredException ex) {
+        log.warn("URL expired: {}", ex.getMessage());
+        return buildResponse(HttpStatus.GONE, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
