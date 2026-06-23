@@ -1,5 +1,6 @@
 package com.happysat.url_shortener.service;
 
+import com.happysat.url_shortener.dto.CachedShortUrl;
 import com.happysat.url_shortener.dto.ShortenRequest;
 import com.happysat.url_shortener.exception.AliasAlreadyExistsException;
 import com.happysat.url_shortener.exception.UrlExpiredException;
@@ -99,10 +100,7 @@ class UrlServiceTest {
     @Test
     @DisplayName("resolve() returns original URL for existing code without expiry")
     void resolve_existingCodeWithoutExpiry_returnsOriginalUrl() {
-        ShortUrl entity = new ShortUrl();
-        entity.setOriginalUrl("https://google.com");
-        entity.setShortCode("abc");
-        when(urlLookupService.lookup("abc")).thenReturn(entity);
+        when(urlLookupService.lookup("abc")).thenReturn(new CachedShortUrl("https://google.com", null));
 
         String result = urlService.resolve("abc");
 
@@ -113,11 +111,8 @@ class UrlServiceTest {
     @Test
     @DisplayName("resolve() returns original URL when expiry is in the future")
     void resolve_futureExpiry_returnsOriginalUrl() {
-        ShortUrl entity = new ShortUrl();
-        entity.setOriginalUrl("https://google.com");
-        entity.setShortCode("future");
-        entity.setExpiresAt(LocalDateTime.now().plusDays(1));
-        when(urlLookupService.lookup("future")).thenReturn(entity);
+        when(urlLookupService.lookup("future")).thenReturn(
+                new CachedShortUrl("https://google.com", LocalDateTime.now().plusDays(1)));
 
         String result = urlService.resolve("future");
 
@@ -127,11 +122,8 @@ class UrlServiceTest {
     @Test
     @DisplayName("resolve() throws UrlExpiredException when expiry is in the past")
     void resolve_pastExpiry_throwsGone() {
-        ShortUrl entity = new ShortUrl();
-        entity.setOriginalUrl("https://google.com");
-        entity.setShortCode("expired");
-        entity.setExpiresAt(LocalDateTime.now().minusMinutes(1));
-        when(urlLookupService.lookup("expired")).thenReturn(entity);
+        when(urlLookupService.lookup("expired")).thenReturn(
+                new CachedShortUrl("https://google.com", LocalDateTime.now().minusMinutes(1)));
 
         UrlExpiredException ex = assertThrows(
                 UrlExpiredException.class,

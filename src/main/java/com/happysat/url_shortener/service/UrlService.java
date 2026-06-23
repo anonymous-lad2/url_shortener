@@ -47,13 +47,13 @@ public class UrlService {
     }
 
     public String resolve(String code) {
-        ShortUrl entity = urlLookupService.lookup(code);
+        var cached = urlLookupService.lookup(code);
 
-        if (entity.getExpiresAt() != null && entity.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (cached.expiresAt() != null && cached.expiresAt().isBefore(LocalDateTime.now())) {
             throw new UrlExpiredException(code);
         }
 
-        log.info("Redirecting: {} -> {}", code, entity.getOriginalUrl());
-        return entity.getOriginalUrl();
+        log.info("Redirecting: {} -> {}", code, cached.originalUrl());
+        return cached.originalUrl();
     }
 }
